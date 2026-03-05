@@ -1,69 +1,103 @@
+import yfinance as yf
+import pandas as pd
+import torch
 from transformers import pipeline, BertTokenizer, BertForSequenceClassification
+from torch.utils.data import Dataset
 
-def setup_esg_pipeline():
-    print("Loading models... ")
+def setup_accelerated_pipeline():
+    print("Detecting hardware...")
     
-    # 1. Load the ESG Topic Classifier (Auto-detect works fine for this one)
+    # 1. Intelligent Hardware Routing
+    if torch.cuda.is_available():
+        # Windows + NVIDIA 4060
+        device = torch.device("cuda:0")
+        print(f"🚀 Hardware Acceleration: NVIDIA GPU ({torch.cuda.get_device_name(0)}) detected.")
+    elif torch.backends.mps.is_available():
+        # Mac + M1 (Apple Silicon)
+        device = torch.device("mps")
+        print("🚀 Hardware Acceleration: Apple M1 (MPS) detected.")
+    else:
+        # Fallback
+        device = torch.device("cpu")
+        print("⚠️ No GPU detected. Falling back to CPU.")
+
+    print("Loading models into VRAM/Unified Memory...")
+
+    # 2. ESG Topic Classifier
     esg_model_name = "yiyanghkust/finbert-esg"
-    esg_nlp = pipeline("text-classification", model=esg_model_name, tokenizer=esg_model_name)
+    esg_nlp = pipeline("text-classification", model=esg_model_name, device=device)
     
-    # 2. Load the Financial Sentiment Classifier (Explicitly loaded to bypass the bug)
+    # 3. Financial Sentiment Classifier (Explicitly loaded to bypass the config bug)
     tone_model_name = "yiyanghkust/finbert-tone"
-    
-    # We explicitly tell it to use the BERT architecture and tokenizer
     tone_tokenizer = BertTokenizer.from_pretrained(tone_model_name)
     tone_model = BertForSequenceClassification.from_pretrained(tone_model_name, num_labels=3)
+    tone_nlp = pipeline("text-classification", model=tone_model, tokenizer=tone_tokenizer, device=device)
     
-    # Pass the pre-loaded model and tokenizer into the pipeline
-    tone_nlp = pipeline("text-classification", model=tone_model, tokenizer=tone_tokenizer)
-    
-    return esg_nlp, tone_nlp
+    return esg_nlp, tone_nlp    
 
-def calculate_esg_score(texts, esg_nlp, tone_nlp):
-    # Initialize our scoring buckets
-    esg_scores = {"Environmental": 0, "Social": 0, "Governance": 0}
+def fetch_ticker_news(ticker_symbol):
+    print(f"Fetching recent news for {ticker_symbol}...")
+    ticker = yf.Ticker(ticker_symbol)
+    news = ticker.news
     
-    # Simple mapping for sentiment to numerical value
-    sentiment_map = {"Positive": 1, "Neutral": 0, "Negative": -1}
+    # Extract titles and publishers into a DataFrame
+    data = []
+    for article in news:
+        data.append({
+            "ticker": ticker_symbol,
+            "publisher": article.get("publisher", "Unknown"),
+            "text": article.get("title", "")
+        })
     
-    print("-" * 60)
-    for text in texts:
-        # Step A: Identify the ESG category
-        esg_result = esg_nlp(text)[0]
-        category = esg_result['label']
+    return pd.DataFrame(data)
+
+def analyze_esg_data_in_batches(df, esg_nlp, tone_nlp, batch_size=16):
+    print(f"Processing {len(df)} records in batches of {batch_size}...")
+    
+    texts = df['text'].tolist()
+    
+    # Run ESG classification in batches
+    esg_results = esg_nlp(texts, batch_size=batch_size)
+    df['esg_category'] = [res['label'] for res in esg_results]
+    
+    # Filter for texts that are actually ESG-related to save compute time
+    esg_mask = df['esg_category'] != "None"
+    esg_texts = df.loc[esg_mask, 'text'].tolist()
+    
+    # Run Sentiment analysis only on the ESG-related text
+    df['sentiment'] = "None"
+    df['sentiment_score'] = 0.0
+    
+    if esg_texts:
+        tone_results = tone_nlp(esg_texts, batch_size=batch_size)
         
-        # Step B: If it's an ESG topic, determine the sentiment
-        if category in esg_scores:
-            tone_result = tone_nlp(text)[0]
-            sentiment = tone_result['label']
-            weight = sentiment_map[sentiment]
-            
-            # Step C: Aggregate the score
-            esg_scores[category] += weight
-            
-            print(f"Text:      '{text}'")
-            print(f"Extracted: [{category}] with [{sentiment}] sentiment -> Score Change: {weight}\n")
-        else:
-            print(f"Text:      '{text}'")
-            print("Extracted: [None] -> Not an ESG topic. Ignored.\n")
-            
-    return esg_scores
+        sentiment_map = {"Positive": 1, "Neutral": 0, "Negative": -1}
+        
+        # Map results back to the DataFrame
+        df.loc[esg_mask, 'sentiment'] = [res['label'] for res in tone_results]
+        df.loc[esg_mask, 'sentiment_score'] = [sentiment_map[res['label']] for res in tone_results]
+
+    return df
 
 if __name__ == "__main__":
-    esg_nlp, tone_nlp = setup_esg_pipeline()
+    # 1. Setup the accelerated NLP pipeline
+    esg_nlp, tone_nlp = setup_accelerated_pipeline()
     
-    # Simulate a stream of unstructured text (e.g., news headlines or report sentences)
-    sample_texts = [
-        "The company cut its carbon footprint by 20% this year using renewable energy.",
-        "Workers are striking over unfair labor practices and poor safety conditions.",
-        "The board of directors lacks diversity and independent oversight.",
-        "Revenue increased by 15% in Q3 due to strong sales in Europe.", # Financial noise
-        "They donated $5 million to local education initiatives in the community."
-    ]
+    # 2. Retrieve real data (Example: Sourcing news for a few tickers)
+    tickers = ["MSFT", "XOM", "TSLA"]
+    dfs = [fetch_ticker_news(t) for t in tickers]
+    combined_df = pd.concat(dfs, ignore_index=True)
     
-    final_scores = calculate_esg_score(sample_texts, esg_nlp, tone_nlp)
-    
-    print("-" * 60)
-    print("Final Aggregated ESG Sentiment Scores:")
-    for category, score in final_scores.items():
-        print(f"{category}: {score}")
+    # 3. Process the data efficiently
+    if not combined_df.empty:
+        results_df = analyze_esg_data_in_batches(combined_df, esg_nlp, tone_nlp, batch_size=8)
+        
+        print("\n" + "="*80)
+        print("SAMPLE OUTPUT:")
+        # Display only articles that triggered an ESG signal
+        signals_only = results_df[results_df['esg_category'] != "None"]
+        if not signals_only.empty:
+            print(signals_only[['ticker', 'text', 'esg_category', 'sentiment', 'sentiment_score']].head())
+        else:
+            print("No significant ESG signals detected in the latest headlines.")
+        print("="*80)
