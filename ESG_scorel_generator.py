@@ -43,11 +43,13 @@ def fetch_ticker_news(ticker_symbol):
     # Extract titles and publishers into a DataFrame
     data = []
     for article in news:
+        # print(article.get("content", "").get("title", ""))
         data.append({
             "ticker": ticker_symbol,
             "publisher": article.get("publisher", "Unknown"),
-            "text": article.get("title", "")
+            "text": article.get("content", "").get("title", "")
         })
+    # print(data)
     
     return pd.DataFrame(data)
 
@@ -84,7 +86,19 @@ if __name__ == "__main__":
     esg_nlp, tone_nlp = setup_accelerated_pipeline()
     
     # 2. Retrieve real data (Example: Sourcing news for a few tickers)
-    tickers = ["MSFT", "XOM", "TSLA"]
+    tickers = [
+        # Technology
+        "AAPL", "MSFT", "GOOGL", "AMZN", "META", "NVDA", "INTC", "CSCO", "IBM", "ORCL",
+        # Energy
+        "XOM", "CVX", "BP", "SHEL", "TTE", "COP", "SLB", "EOG", "MPC", "PSX",
+        # Finance
+        "JPM", "BAC", "WFC", "C", "GS", "MS", "AXP", "V", "MA", "BLK",
+        # Consumer & Retail
+        "WMT", "TGT", "COST", "HD", "MCD", "SBUX", "NKE", "PG", "KO", "PEP",
+        # Healthcare, Auto, & Industrials
+        "JNJ", "PFE", "UNH", "TSLA", "F", "GM", "BA", "LMT", "CAT", "DE"
+    ]
+    # tickers = ["AAPL"]
     dfs = [fetch_ticker_news(t) for t in tickers]
     combined_df = pd.concat(dfs, ignore_index=True)
     
