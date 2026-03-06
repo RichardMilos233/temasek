@@ -1,0 +1,47 @@
+data:
+  ingestor: mock_pit
+  imputer: forward_fill_median
+  normalizer: sector_zscore
+  ingestor_params:
+    start_date: "2020-01-01"
+    end_date: "2025-12-31"
+    seed: 42
+    restatement_probability: 0.15
+  imputer_params: {}
+  normalizer_params: {}
+
+signal:
+  builder: materiality_momentum
+  orthogonalizer: ols
+  builder_params:
+    lookback: 63
+  orthogonalizer_params:
+    include_sector_dummies: true
+    zscore_output: true
+
+forecast:
+  method: ic_scaled_rank
+  params:
+    scale: 0.02
+    ic_window: 63
+    min_periods: 21
+
+portfolio:
+  constructor: constrained_mean_variance
+  params:
+    risk_aversion: 6.0
+    gross_leverage: 1.5
+    max_abs_weight: 0.08
+    turnover_limit: 0.35
+    cov_lookback: 60
+    ridge: 0.0001
+    sector_neutral: true
+    n_iterations: 40
+    step_size: 0.04
+    fallback_constructor: quantile_long_short
+
+backtest:
+  params:
+    execution_lag: 1
+    transaction_cost_bps: 10.0
+    slippage_bps: 5.0
