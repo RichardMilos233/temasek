@@ -26,21 +26,25 @@ src/esg_alpha/
   portfolio/
   backtest/
 run_alpha_pipeline.py
+environment.yml
 tests/test_pipeline_smoke.py
 requirements.txt
 requirements-nlp.txt
 ```
 
-## Environment Setup
+## Environment Setup (Conda)
 
 ### Windows (PowerShell)
 
 ```powershell
 cd d:\NTU\Intern\temasek
-python -m venv .venv
-.\.venv\Scripts\Activate.ps1
-pip install --upgrade pip
-pip install -r requirements.txt
+# First-time setup
+conda env create -f environment.yml
+conda activate temasek
+
+# Existing environment (run this instead of create)
+# conda env update -f environment.yml --prune
+# conda activate temasek
 ```
 
 Optional NLP stack (FinBERT signal):
@@ -53,10 +57,13 @@ pip install -r requirements-nlp.txt
 
 ```bash
 cd /path/to/temasek
-python -m venv .venv
-source .venv/bin/activate
-pip install --upgrade pip
-pip install -r requirements.txt
+# First-time setup
+conda env create -f environment.yml
+conda activate temasek
+
+# Existing environment (run this instead of create)
+# conda env update -f environment.yml --prune
+# conda activate temasek
 ```
 
 Optional NLP stack:
