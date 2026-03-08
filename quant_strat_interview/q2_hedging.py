@@ -63,11 +63,10 @@ def implement_hedging_strategy(df, lookback=60):
     # Drop the NaN rows caused by the lookback period
     return returns.dropna()
 
-df = pd.read_csv("quant_strat_interview/q2.csv", header=0)
+df = pd.read_csv("quant_strat_interview/q2.csv", header=0, parse_dates=["Date"])
 
 lookback = 10
 hedged_df = implement_hedging_strategy(df, lookback)
-hedged_df.to_csv("quant_strat_interview/q2_hedged.csv")
 
 def track_performance(returns_df, lookback):
     """
@@ -118,8 +117,9 @@ def track_performance(returns_df, lookback):
     ax1.grid(True, alpha=0.3)
 
     # --- Bottom Plot: Drawdowns ---
-    ax2.fill_between(returns_df.index, get_drawdown(returns_df['Cum_Stock']), color='gray', alpha=0.3, label='Unhedged Drawdown')
-    ax2.fill_between(returns_df.index, get_drawdown(returns_df['Cum_Fully_Hedged']), color='green', alpha=0.3, label='Hedged Drawdown')
+    ax2.plot(returns_df.index, get_drawdown(returns_df['Cum_Stock']), color='gray', alpha=0.5, label='Unhedged Drawdown')
+    ax2.plot(returns_df.index, get_drawdown(returns_df['Cum_Index_Hedged']), color='blue', alpha=1, label='Index Hedged Drawdown')
+    ax2.plot(returns_df.index, get_drawdown(returns_df['Cum_Fully_Hedged']), color='green', alpha=1, label='Fully Hedged Drawdown')
     ax2.set_ylabel('Drawdown')
     ax2.set_xlabel('Date')
     ax2.legend(loc='lower left')
@@ -130,6 +130,4 @@ def track_performance(returns_df, lookback):
 
     return returns_df
 
-# Execute tracking
-hedged_df = pd.read_csv("quant_strat_interview/q2_hedged.csv")
 track_performance(hedged_df, lookback)
