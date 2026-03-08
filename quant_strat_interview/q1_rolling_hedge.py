@@ -70,7 +70,7 @@ def calculate_hedge_pnl(df, vol_col, roll_period, r=0.01, q=0.0, hedge_ratio=1.0
 
 # 3. Define your target ratio (e.g., 0.5 for 50% notional protection)
 # You can adjust this variable to test different drawdown limits
-target_ratio = 1
+target_ratio = 2
 
 # Run the simulations (63 days for 3M, 252 days for 1Y)
 df['Hedge_Only_90D'] = calculate_hedge_pnl(df, 'Vol_3M', 63, hedge_ratio=target_ratio)
