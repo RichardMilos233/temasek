@@ -4,16 +4,13 @@ import matplotlib.pyplot as plt
 def volatility_binary(correlation, w1=0.5, w2=0.5, sigma1=0.2, sigma2=0.3):
     return np.sqrt((w1*sigma1)**2 + (w2*sigma2)**2 + 2*w1*w2*sigma1*sigma2*correlation)
 
-
-# 2. Define the correlation range (rho) from -1 (-100%) to +1 (+100%)
+# b
 correlation = np.linspace(-1, 1, 500)
 vol_p = volatility_binary(correlation)
 
-# 4. Create the professional plot
 plt.figure(figsize=(10, 6))
 plt.plot(correlation, vol_p, label='Portfolio Volatility ($\sigma_p$)', color='#1f77b4', linewidth=2.5)
 
-# 5. Highlight boundary and midpoint values
 rho_points = np.array([-1, 0, 1])
 vol_points = volatility_binary(rho_points)
 
@@ -26,7 +23,6 @@ for r, v in zip(rho_points, vol_points):
                  xy=(r, v), xytext=(5, 5) if r < 1 else (-45, -15),
                  textcoords='offset points', fontsize=10, fontweight='bold')
 
-# 6. Chart formatting for a professional report
 plt.title('2-Asset Portfolio Volatility as a Function of Correlation', fontsize=14, fontweight='bold')
 plt.xlabel('Correlation Coefficient ($\\rho$)', fontsize=12)
 plt.ylabel('Portfolio Volatility ($\sigma_p$)', fontsize=12)
@@ -41,4 +37,16 @@ plt.ylim(0, 0.35)
 plt.legend(loc='upper left')
 
 plt.tight_layout()
-plt.show()
+# plt.show()
+plt.savefig("quant_strat_interview/q3_volatility.png")
+
+# c
+# The curve is in the shape of a square root function, and it is concave.
+# As correlation goes down, the portfolio volatility goes down with an increasing rate
+# Yes, it makes sense
+# when correlation is 1, the second asset can be seen as the 1.5x margin of the first asset
+# when correlation is -1, the second asset can be seen as the 1.5x short of the first asset
+
+# d
+def volatility_multiple(w, sigma):
+    return np.sqrt(w.T @ sigma @ w)
