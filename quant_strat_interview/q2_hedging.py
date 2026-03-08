@@ -8,7 +8,6 @@ def implement_hedging_strategy(df, lookback=60):
     lookback: Window for calculating rolling beta 
     """
     # 1. Ensure Date is index and calculate daily returns
-    # Note: Using pct_change() to get daily growth rates
     returns = df.set_index('Date').pct_change().dropna()
     
     # Rename for easier internal handling
@@ -18,39 +17,39 @@ def implement_hedging_strategy(df, lookback=60):
         'GBPUSD': 'FX'
     })
     
-    hedge_ratios = []
+    hedge_ratios_index = []
+    hedge_ratios_fx = []
     
-    # 2. Rolling Beta Calculation (Index Hedge Sizing)
+    # 2. Rolling Beta Calculation (Multiple Linear Regression)
     for i in range(len(returns)):
         if i < lookback:
-            hedge_ratios.append(np.nan)
+            hedge_ratios_index.append(np.nan)
+            hedge_ratios_fx.append(np.nan)
             continue
             
         # Get historical window
         y = returns['Stock'].iloc[i-lookback:i]
-        X = returns['Index'].iloc[i-lookback:i]
+        X = returns[['Index', 'FX']].iloc[i-lookback:i]
         X = sm.add_constant(X) # Include intercept for OLS
         
         model = sm.OLS(y, X).fit()
-        # The coefficient (Beta) tells us how many units of FTSE to short 
-        # for every 1 unit of Stock held.
-        beta = model.params['Index']
-        hedge_ratios.append(beta)
         
-    returns['Beta_Index'] = hedge_ratios
+        # Extract partial betas for Index and FX
+        hedge_ratios_index.append(model.params['Index'])
+        hedge_ratios_fx.append(model.params['FX'])
+        
+    returns['Beta_Index'] = hedge_ratios_index
+    returns['Beta_FX'] = hedge_ratios_fx
     
     # 3. Calculate Performance
     # Performance of the long stock position
     returns['Stock_PnL'] = returns['Stock']
     
     # Performance of the Short Index Hedge
-    # (Inverse of Index return * Beta)
     returns['Index_Hedge_PnL'] = -returns['Beta_Index'] * returns['Index']
     
-    # Performance of the Short FX Hedge
-    # Hedging GBPUSD (Assuming your base currency is USD)
-    # This offsets the impact of GBP weakening against the USD
-    returns['FX_Hedge_PnL'] = -1.0 * returns['FX'] 
+    # Performance of the Dynamic FX Hedge
+    returns['FX_Hedge_PnL'] = -returns['Beta_FX'] * returns['FX'] 
     
     # 4. Total Combined Daily Return
     returns['Total_Hedged_Return'] = (
@@ -59,6 +58,7 @@ def implement_hedging_strategy(df, lookback=60):
         returns['FX_Hedge_PnL']
     )
     
+    # Drop the NaN rows caused by the lookback period
     return returns.dropna()
 
 df = pd.read_csv("quant_strat_interview/q2.csv", header=0)
