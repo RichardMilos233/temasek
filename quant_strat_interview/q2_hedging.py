@@ -2,10 +2,10 @@ import pandas as pd
 import numpy as np
 import statsmodels.api as sm
 
-def implement_hedging_strategy(df, lookback=30):
+def implement_hedging_strategy(df, lookback=15):
     """
     df: DataFrame containing columns 'Stock 1', 'FTSE 100', 'GBPUSD'
-    lookback: Window for calculating rolling beta (default 60 trading days)
+    lookback: Window for calculating rolling beta 
     """
     # 1. Ensure Date is index and calculate daily returns
     # Note: Using pct_change() to get daily growth rates
