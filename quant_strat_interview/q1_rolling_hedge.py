@@ -1,37 +1,66 @@
 import pandas as pd
 import numpy as np
 import matplotlib.pyplot as plt
+from scipy.stats import norm
 
 # 1. Load your updated data
 df = pd.read_csv("quant_strat_interview/q1_pricing.csv", index_col='Date', parse_dates=True)
 
-# 2. Define the reusable backtesting function with hedge_ratio
-def calculate_hedge_pnl(df, price_col, roll_period, hedge_ratio=1.0):
+
+def bs_put_price(S, K, T, r, q, sigma):
+    """
+    Calculates the Black-Scholes European put price for a single day.
+    Returns intrinsic value if the option is at or past expiration.
+    """
+    if T <= 0:
+        return max(K - S, 0)
+        
+    d1 = (np.log(S / K) + (r - q + 0.5 * sigma**2) * T) / (sigma * np.sqrt(T))
+    d2 = d1 - sigma * np.sqrt(T)
+    
+    put_price = K * np.exp(-r * T) * norm.cdf(-d2) - S * np.exp(-q * T) * norm.cdf(-d1)
+    return put_price
+
+def calculate_hedge_pnl(df, vol_col, roll_period, r=0.01, q=0.0, hedge_ratio=1.0):
+    """
+    Calculates the P&L of a rolling put hedge with daily mark-to-market pricing,
+    utilizing an external Black-Scholes pricer.
+    """
     num_days = len(df)
     hedge_pnl = np.zeros(num_days)
-    current_cash = 0.0
+    realized_cash = 0.0  # Tracks our bank account (premiums paid and payoffs received)
     
     i = 0
     while i < num_days:
-        # Scale the cost of the option by the hedge ratio
-        premium_paid = df[price_col].iloc[i] * hedge_ratio
-        strike_price = df['Strike'].iloc[i] 
+        # 1. Lock in the option strike on the roll date
+        K = df['Strike'].iloc[i]
         
-        current_cash -= premium_paid
+        # Determine the exact expiration index
         expiration_idx = min(i + roll_period, num_days - 1)
         
-        # Fill the daily P&L flat until expiration
-        hedge_pnl[i:expiration_idx] = current_cash
+        # 2. Mark the active option to market every single day until expiration
+        for j in range(i, expiration_idx + 1):
+            # Calculate remaining time to maturity in years
+            T_years = (expiration_idx - j) / 365.0 
+            
+            S_j = df['SP'].iloc[j]
+            sigma_j = df[vol_col].iloc[j] / 100.0
+            
+            # Call the isolated BS function
+            current_opt_value = bs_put_price(S=S_j, K=K, T=T_years, r=r, q=q, sigma=sigma_j)
+            
+            # If j == i, we are buying the option today
+            if j == i:
+                premium_paid = current_opt_value * hedge_ratio
+                realized_cash -= premium_paid
+            
+            # Total P&L is our realized cash + the unrealized value of the active option
+            hedge_pnl[j] = realized_cash + (current_opt_value * hedge_ratio)
         
-        # Calculate exit
+        # 3. Handle expiration payoff and roll
         if expiration_idx < num_days - 1:
-            settlement_spx = df['SP'].iloc[expiration_idx]
-            
-            # Scale the payoff by the same hedge ratio
-            payoff = max(strike_price - settlement_spx, 0) * hedge_ratio
-            
-            current_cash += payoff
-            hedge_pnl[expiration_idx] = current_cash
+            payoff = max(K - df['SP'].iloc[expiration_idx], 0) * hedge_ratio
+            realized_cash += payoff
             
         i = expiration_idx
         if i == num_days - 1:
