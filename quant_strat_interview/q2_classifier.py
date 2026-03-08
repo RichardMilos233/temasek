@@ -28,6 +28,8 @@ for idx, curr in itertools.product(indices, currencies):
     X = sm.add_constant(X)
     
     model = sm.OLS(y, X).fit()
+    print(f"index: {idx}, currency: {curr}")
+    print(f"R^2: {model.rsquared}")
     
     results_summary.append({
         'Index': idx,
