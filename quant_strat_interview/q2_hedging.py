@@ -2,7 +2,7 @@ import pandas as pd
 import numpy as np
 import statsmodels.api as sm
 
-def implement_hedging_strategy(df, lookback=15):
+def implement_hedging_strategy(df, lookback=60):
     """
     df: DataFrame containing columns 'Stock 1', 'FTSE 100', 'GBPUSD'
     lookback: Window for calculating rolling beta 

@@ -70,7 +70,7 @@ def calculate_hedge_pnl(df, vol_col, roll_period, r=0.01, q=0.0, hedge_ratio=1.0
 
 # 3. Define your target ratio (e.g., 0.5 for 50% notional protection)
 # You can adjust this variable to test different drawdown limits
-target_ratio = 2
+target_ratio = 1
 
 # Run the simulations (63 days for 3M, 252 days for 1Y)
 df['Hedge_Only_90D'] = calculate_hedge_pnl(df, 'Vol_3M', 63, hedge_ratio=target_ratio)
@@ -107,3 +107,50 @@ ax2.legend(loc='upper left')
 
 plt.tight_layout()
 plt.savefig(f"quant_strat_interview/q1_pnl_hedge_ratio_{target_ratio}.png")
+
+
+# --- APPEND THIS TO YOUR EXISTING SCRIPT ---
+
+print("\n" + "="*40)
+print("QUANTITATIVE RISK ANALYSIS: MAX DRAWDOWN")
+print("="*40)
+
+# 1. Reconstruct total portfolio value (Index Points)
+# To calculate a percentage drawdown, we need the total portfolio value, not just P&L.
+df['Unhedged_Value'] = starting_spx + df['Long_SPX_PnL']
+df['Hedged_3M_Value'] = starting_spx + df['Portfolio_90D']
+df['Hedged_1Y_Value'] = starting_spx + df['Portfolio_1Y']
+
+def get_max_drawdown(value_series):
+    """Calculates the Maximum Drawdown as a percentage."""
+    rolling_max = value_series.cummax()
+    drawdown = (value_series - rolling_max) / rolling_max
+    return drawdown.min()
+
+# 2. Define the specific crisis windows
+crisis_periods = {
+    "2008 Global Financial Crisis (Oct 2007 - Mar 2009)": ('2007-10-01', '2009-03-31'),
+    "2020 COVID Crash (Feb 2020 - Apr 2020)": ('2020-02-01', '2020-04-30')
+}
+
+# 3. Calculate and print the drawdowns
+for name, (start_date, end_date) in crisis_periods.items():
+    # Slice the dataframe for the specific crisis period
+    mask = (df.index >= start_date) & (df.index <= end_date)
+    df_period = df.loc[mask]
+    
+    if not df_period.empty:
+        md_unhedged = get_max_drawdown(df_period['Unhedged_Value'])
+        md_3m = get_max_drawdown(df_period['Hedged_3M_Value'])
+        md_1y = get_max_drawdown(df_period['Hedged_1Y_Value'])
+        
+        print(f"\n{name}:")
+        print(f"  Unhedged Max Drawdown: {md_unhedged:.2%}")
+        print(f"  Hedged 3M Max Drawdown : {md_3m:.2%}")
+        print(f"  Hedged 1Y Max Drawdown : {md_1y:.2%}")
+
+# 4. Look at the overall timeline risk
+print("\nOverall Timeline (Full Backtest):")
+print(f"  Unhedged Max Drawdown: {get_max_drawdown(df['Unhedged_Value']):.2%}")
+print(f"  Hedged 3M Max Drawdown : {get_max_drawdown(df['Hedged_3M_Value']):.2%}")
+print(f"  Hedged 1Y Max Drawdown : {get_max_drawdown(df['Hedged_1Y_Value']):.2%}")
