@@ -41,7 +41,7 @@ def calculate_hedge_pnl(df, vol_col, roll_period, r=0.01, q=0.0, hedge_ratio=1.0
         # 2. Mark the active option to market every single day until expiration
         for j in range(i, expiration_idx + 1):
             # Calculate remaining time to maturity in years
-            T_years = (expiration_idx - j) / 365.0 
+            T_years = (expiration_idx - j) / 252.0
             
             S_j = df['SP'].iloc[j]
             sigma_j = df[vol_col].iloc[j] / 100.0
@@ -73,8 +73,8 @@ def calculate_hedge_pnl(df, vol_col, roll_period, r=0.01, q=0.0, hedge_ratio=1.0
 target_ratio = 1
 
 # Run the simulations (63 days for 3M, 252 days for 1Y)
-df['Hedge_Only_90D'] = calculate_hedge_pnl(df, 'Put_Price_90D', 63, hedge_ratio=target_ratio)
-df['Hedge_Only_1Y'] = calculate_hedge_pnl(df, 'Put_Price_1Y', 252, hedge_ratio=target_ratio)
+df['Hedge_Only_90D'] = calculate_hedge_pnl(df, 'Vol_3M', 63, hedge_ratio=target_ratio)
+df['Hedge_Only_1Y'] = calculate_hedge_pnl(df, 'Vol_1Y', 252, hedge_ratio=target_ratio)
 
 # 4. Calculate total portfolio P&L
 starting_spx = df['SP'].iloc[0]
