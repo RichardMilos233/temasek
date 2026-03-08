@@ -44,6 +44,17 @@ df['Put_Price_90D'] = vectorized_bs_put(
     sigma=df['Vol_Proxy']
 )
 
+T = 365 / 365.0         # 1-year maturity in years
+
+df['Put_Price_1Y'] = vectorized_bs_put(
+    S=df['SP'], 
+    K=df['Strike'], 
+    T=T, 
+    r=r, 
+    q=q, 
+    sigma=df['Vol_Proxy']
+)
+
 print("\n--- Strategy Pricing Data ---")
-print(df[['SP', 'VIX', 'Strike', 'Vol_Proxy', 'Put_Price_90D']])
+print(df[['SP', 'VIX', 'Strike', 'Vol_Proxy', 'Put_Price_90D', 'Put_Price_1Y']])
 df.to_csv("quant_strat_interview/q1_pricing.csv")
