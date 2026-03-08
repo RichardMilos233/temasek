@@ -82,6 +82,7 @@ def plot_hedging_performance(returns_df):
     ax2.legend(loc='lower left')
 
     plt.tight_layout()
-    plt.show()
+    # plt.show()
+    plt.savefig("quant_strat_interview/q2_pnl.png")
 
 plot_hedging_performance(hedged_returns)

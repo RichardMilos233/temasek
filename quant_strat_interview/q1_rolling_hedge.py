@@ -70,4 +70,5 @@ ax2.grid(True, linestyle='--', alpha=0.7)
 ax2.legend(loc='upper left')
 
 plt.tight_layout()
-plt.show()
+# plt.show()
+plt.savefig("quant_strat_interview/q1_pnl.png")
