@@ -28,7 +28,8 @@ for idx, curr in itertools.product(indices, currencies):
     X = sm.add_constant(X)
     
     model = sm.OLS(y, X).fit()
-    print(f"index: {idx}, currency: {curr}")
+    print(f"index: {idx}, p_index: {model.pvalues[idx]}")
+    print(f"currency: {curr}, p_curr: {model.pvalues[curr]}")
     print(f"R^2: {model.rsquared}")
     
     results_summary.append({
@@ -51,3 +52,19 @@ print(f"Currency: {best['Currency']}")
 print(f"R-Squared: {best['R2']:.4f}")
 print(f"Hedge Ratio (Index): {best['Beta_Index']:.4f}")
 print(f"Hedge Ratio (Currency): {best['Beta_Curr']:.4f}")
+
+
+y = returns_df['Stock 1']
+    
+# Independent variables: Index + Currency + Constant
+idx = 'FTSE 100'
+curr1 = 'GBPUSD'
+curr2 = 'EURUSD'
+X = returns_df[[idx, curr1, curr2]]
+X = sm.add_constant(X)
+
+model = sm.OLS(y, X).fit()
+print(f"index: {idx}, p_index: {model.pvalues[idx]}")
+print(f"currency: {curr1}, p_curr: {model.pvalues[curr1]}")
+print(f"currency: {curr2}, p_curr: {model.pvalues[curr2]}")
+print(f"R^2: {model.rsquared}")
