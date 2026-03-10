@@ -51,9 +51,9 @@ def plot_portfolio_values(df, target_ratio=TARGET_RATIO):
     ax.legend(loc='upper left')
 
     plt.tight_layout()
-    strike_pct_for_file = f'{strike_pct:.2f}'.replace('.', 'p')
+    strike_pct_for_file = f"{int(strike_pct*100)}"
     plt.savefig(
-        f'quant_strat_interview/q1_portfolio_value_ratio_{target_ratio}_strike_{strike_pct_for_file}.png'
+        f'quant_strat_interview/q1_pnl/q1_portfolio_value_ratio_{target_ratio}_strike_{strike_pct_for_file}.png'
     )
 
 def get_max_drawdown(value_series):
