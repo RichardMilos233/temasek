@@ -14,15 +14,20 @@ df = pd.merge(sp, vix, on='Date', how='inner')
 df.set_index('Date', inplace=True)
 
 
-def vectorized_bs_put(S, K, T, r, q, sigma):
+
+def bs_put_price(S, K, T, r, q, sigma):
     """
-    Calculates Black-Scholes European put prices for an entire pandas Series natively.
+    Calculates the Black-Scholes European put price for a single day.
+    Returns intrinsic value if the option is at or past expiration.
     """
+    if T <= 0:
+        return max(K - S, 0)
+        
     d1 = (np.log(S / K) + (r - q + 0.5 * sigma**2) * T) / (sigma * np.sqrt(T))
     d2 = d1 - sigma * np.sqrt(T)
     
-    put_prices = K * np.exp(-r * T) * norm.cdf(-d2) - S * np.exp(-q * T) * norm.cdf(-d1)
-    return put_prices
+    put_price = K * np.exp(-r * T) * norm.cdf(-d2) - S * np.exp(-q * T) * norm.cdf(-d1)
+    return put_price
 
 
 r = 0.01               # Fixed 1% p.a. interest rate
@@ -33,7 +38,7 @@ moneyness = 0.90       # 90% strike
 df['Strike'] = df['SP'] * moneyness
 
 # Calculate the daily theoretical price
-df['Put_Price_90D'] = vectorized_bs_put(
+df['Put_Price_90D'] = bs_put_price(
     S=df['SP'], 
     K=df['Strike'], 
     T=90/365.0, 
@@ -43,7 +48,7 @@ df['Put_Price_90D'] = vectorized_bs_put(
 )
 
 
-df['Put_Price_1Y'] = vectorized_bs_put(
+df['Put_Price_1Y'] = bs_put_price(
     S=df['SP'], 
     K=df['Strike'], 
     T=365/365.0, 

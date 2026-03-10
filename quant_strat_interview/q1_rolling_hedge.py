@@ -1,156 +1,57 @@
-import pandas as pd
 import numpy as np
-import matplotlib.pyplot as plt
-from scipy.stats import norm
+from q1_pricing import bs_put_price
 
-# 1. Load your updated data
-df = pd.read_csv("quant_strat_interview/q1_pricing.csv", index_col='Date', parse_dates=True)
-
-
-def bs_put_price(S, K, T, r, q, sigma):
+def calculate_rebalanced_portfolio(df, vol_col, roll_period, initial_capital, r=0.01, q=0.0, hedge_ratio=1.0):
     """
-    Calculates the Black-Scholes European put price for a single day.
-    Returns intrinsic value if the option is at or past expiration.
-    """
-    if T <= 0:
-        return max(K - S, 0)
-        
-    d1 = (np.log(S / K) + (r - q + 0.5 * sigma**2) * T) / (sigma * np.sqrt(T))
-    d2 = d1 - sigma * np.sqrt(T)
-    
-    put_price = K * np.exp(-r * T) * norm.cdf(-d2) - S * np.exp(-q * T) * norm.cdf(-d1)
-    return put_price
-
-def calculate_hedge_pnl(df, vol_col, roll_period, r=0.01, q=0.0, hedge_ratio=1.0):
-    """
-    Calculates the P&L of a rolling put hedge with daily mark-to-market pricing,
-    utilizing an external Black-Scholes pricer.
+    Calculates the total portfolio value over time, rebalancing at each roll period 
+    to maintain the target ratio of put options to underlying stock.
     """
     num_days = len(df)
-    hedge_pnl = np.zeros(num_days)
-    realized_cash = 0.0  # Tracks our bank account (premiums paid and payoffs received)
+    portfolio_value = np.zeros(num_days)
+    
+    # Track the number of shares and puts currently held
+    N_s = 0.0
+    N_p = 0.0
+    
+    # Initialize capital at t=0
+    V_current = initial_capital
     
     i = 0
     while i < num_days:
-        # 1. Lock in the option strike on the roll date
-        K = df['Strike'].iloc[i]
+        K_i = df['Strike'].iloc[i]
+        S_i = df['SP'].iloc[i]
+        sigma_i = df[vol_col].iloc[i] / 100.0
         
-        # Determine the exact expiration index
         expiration_idx = min(i + roll_period, num_days - 1)
+        T_years_initial = (expiration_idx - i) / 252.0
         
-        # 2. Mark the active option to market every single day until expiration
+        # 1. Price the put option today to figure out the premium
+        P_i = bs_put_price(S=S_i, K=K_i, T=T_years_initial, r=r, q=q, sigma=sigma_i)
+        
+        # 2. Rebalance: Calculate how many shares and puts we can buy with V_current
+        # Formula: N_s = V_current / (S_current + hedge_ratio * P_current)
+        N_s = V_current / (S_i + hedge_ratio * P_i)
+        N_p = hedge_ratio * N_s
+        
+        # 3. Mark to market daily until expiration
         for j in range(i, expiration_idx + 1):
-            # Calculate remaining time to maturity in years
-            T_years = (expiration_idx - j) / 252.0
-            
             S_j = df['SP'].iloc[j]
+            # ith day 3m volatility to estimate jth day expiration_idx - j day volatility
             sigma_j = df[vol_col].iloc[j] / 100.0
+            T_years_j = (expiration_idx - j) / 252.0
             
-            # Call the isolated BS function
-            current_opt_value = bs_put_price(S=S_j, K=K, T=T_years, r=r, q=q, sigma=sigma_j)
+            # Current value of the active option
+            P_j = bs_put_price(S=S_j, K=K_i, T=T_years_j, r=r, q=q, sigma=sigma_j)
             
-            # If j == i, we are buying the option today
-            if j == i:
-                premium_paid = current_opt_value * hedge_ratio
-                realized_cash -= premium_paid
+            # Total portfolio value on day j
+            V_j = (N_s * S_j) + (N_p * P_j)
+            portfolio_value[j] = V_j
             
-            # Total P&L is our realized cash + the unrealized value of the active option
-            hedge_pnl[j] = realized_cash + (current_opt_value * hedge_ratio)
-        
-        # 3. Handle expiration payoff and roll
-        if expiration_idx < num_days - 1:
-            payoff = max(K - df['SP'].iloc[expiration_idx], 0) * hedge_ratio
-            realized_cash += payoff
+        # 4. The current capital for the next roll is the portfolio value at expiration
+        V_current = portfolio_value[expiration_idx]
             
         i = expiration_idx
         if i == num_days - 1:
             break
             
-    return hedge_pnl
-
-# 3. Define your target ratio (e.g., 0.5 for 50% notional protection)
-# You can adjust this variable to test different drawdown limits
-target_ratio = 1
-
-# Run the simulations (63 days for 3M, 252 days for 1Y)
-df['Hedge_Only_90D'] = calculate_hedge_pnl(df, 'Vol_3M', 63, hedge_ratio=target_ratio)
-df['Hedge_Only_1Y'] = calculate_hedge_pnl(df, 'Vol_1Y', 252, hedge_ratio=target_ratio)
-
-# 4. Calculate total portfolio P&L
-starting_spx = df['SP'].iloc[0]
-df['Long_SPX_PnL'] = df['SP'] - starting_spx
-
-df['Portfolio_90D'] = df['Long_SPX_PnL'] + df['Hedge_Only_90D']
-df['Portfolio_1Y'] = df['Long_SPX_PnL'] + df['Hedge_Only_1Y']
-
-# 5. Plotting
-df = df[:-1]
-fig, (ax1, ax2) = plt.subplots(2, 1, figsize=(12, 10), sharex=True)
-
-# Top Chart: Hedge Only
-ax1.plot(df.index, df['Hedge_Only_90D'], color='red', label=f'3M Hedge Only P&L (Ratio: {target_ratio})')
-ax1.plot(df.index, df['Hedge_Only_1Y'], color='orange', label=f'1Y Hedge Only P&L (Ratio: {target_ratio})')
-ax1.set_title('Standalone Performance of Put Option Hedges', fontsize=14)
-ax1.set_ylabel('P&L (Index Points)')
-ax1.grid(True, linestyle='--', alpha=0.7)
-ax1.legend(loc='lower left')
-
-# Bottom Chart: Total Portfolio
-ax2.plot(df.index, df['Long_SPX_PnL'], color='blue', alpha=0.4, label='Unhedged (Long SPX)', linewidth=2)
-ax2.plot(df.index, df['Portfolio_90D'], color='green', linewidth=1.5, label=f'Hedged 3M (Ratio: {target_ratio})')
-ax2.plot(df.index, df['Portfolio_1Y'], color='purple', linewidth=1.5, label=f'Hedged 1Y (Ratio: {target_ratio})')
-ax2.set_title('Portfolio Performance: Unhedged vs. Hedged', fontsize=14)
-ax2.set_ylabel('Cumulative P&L (Index Points)')
-ax2.set_xlabel('Date')
-ax2.grid(True, linestyle='--', alpha=0.7)
-ax2.legend(loc='upper left')
-
-plt.tight_layout()
-plt.savefig(f"quant_strat_interview/q1_pnl_hedge_ratio_{target_ratio}.png")
-
-
-# --- APPEND THIS TO YOUR EXISTING SCRIPT ---
-
-print("\n" + "="*40)
-print("QUANTITATIVE RISK ANALYSIS: MAX DRAWDOWN")
-print("="*40)
-
-# 1. Reconstruct total portfolio value (Index Points)
-# To calculate a percentage drawdown, we need the total portfolio value, not just P&L.
-df['Unhedged_Value'] = starting_spx + df['Long_SPX_PnL']
-df['Hedged_3M_Value'] = starting_spx + df['Portfolio_90D']
-df['Hedged_1Y_Value'] = starting_spx + df['Portfolio_1Y']
-
-def get_max_drawdown(value_series):
-    """Calculates the Maximum Drawdown as a percentage."""
-    rolling_max = value_series.cummax()
-    drawdown = (value_series - rolling_max) / rolling_max
-    return drawdown.min()
-
-# 2. Define the specific crisis windows
-crisis_periods = {
-    "2008 Global Financial Crisis (Oct 2007 - Mar 2009)": ('2007-10-01', '2009-03-31'),
-    "2020 COVID Crash (Feb 2020 - Apr 2020)": ('2020-02-01', '2020-04-30')
-}
-
-# 3. Calculate and print the drawdowns
-for name, (start_date, end_date) in crisis_periods.items():
-    # Slice the dataframe for the specific crisis period
-    mask = (df.index >= start_date) & (df.index <= end_date)
-    df_period = df.loc[mask]
-    
-    if not df_period.empty:
-        md_unhedged = get_max_drawdown(df_period['Unhedged_Value'])
-        md_3m = get_max_drawdown(df_period['Hedged_3M_Value'])
-        md_1y = get_max_drawdown(df_period['Hedged_1Y_Value'])
-        
-        print(f"\n{name}:")
-        print(f"  Unhedged Max Drawdown: {md_unhedged:.2%}")
-        print(f"  Hedged 3M Max Drawdown : {md_3m:.2%}")
-        print(f"  Hedged 1Y Max Drawdown : {md_1y:.2%}")
-
-# 4. Look at the overall timeline risk
-print("\nOverall Timeline (Full Backtest):")
-print(f"  Unhedged Max Drawdown: {get_max_drawdown(df['Unhedged_Value']):.2%}")
-print(f"  Hedged 3M Max Drawdown : {get_max_drawdown(df['Hedged_3M_Value']):.2%}")
-print(f"  Hedged 1Y Max Drawdown : {get_max_drawdown(df['Hedged_1Y_Value']):.2%}")
+    return portfolio_value
