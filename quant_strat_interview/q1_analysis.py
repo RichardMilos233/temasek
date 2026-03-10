@@ -3,7 +3,7 @@ import pandas as pd
 from q1_rolling_hedge import calculate_rebalanced_portfolio
 
 PRICING_INPUT_PATH = 'quant_strat_interview/q1_pricing.csv'
-TARGET_RATIO = 0.5
+TARGET_RATIO = 2
 
 
 def load_pricing_data(path=PRICING_INPUT_PATH):

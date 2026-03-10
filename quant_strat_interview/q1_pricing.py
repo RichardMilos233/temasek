@@ -36,11 +36,11 @@ def load_inputs(vix_path=VIX_ADJUSTED_PATH, sp_path=SP_INPUT_PATH):
     return sp, vix
 
 
-def build_pricing_dataframe(sp_df, vix_df):
+def build_pricing_dataframe(sp_df, vix_df, moneyness=MONEYNESS):
     df = pd.merge(sp_df, vix_df, on='Date', how='inner')
     df.set_index('Date', inplace=True)
 
-    df['Strike'] = df['SP'] * MONEYNESS
+    df['Strike'] = df['SP'] * moneyness
 
     df['Put_Price_90D'] = bs_put_price(
         S=df['SP'],
@@ -66,9 +66,10 @@ def generate_pricing_data(
     vix_path=VIX_ADJUSTED_PATH,
     sp_path=SP_INPUT_PATH,
     output_path=PRICING_OUTPUT_PATH,
+    moneyness=MONEYNESS,
 ):
     sp, vix = load_inputs(vix_path=vix_path, sp_path=sp_path)
-    df = build_pricing_dataframe(sp, vix)
+    df = build_pricing_dataframe(sp, vix, moneyness=moneyness)
     print("\n--- Strategy Pricing Data ---")
     print(df[['SP', 'VIX', 'Strike', 'Vol_3M', 'Vol_1Y', 'Put_Price_90D', 'Put_Price_1Y']])
     df.to_csv(output_path)
