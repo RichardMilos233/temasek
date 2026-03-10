@@ -31,6 +31,9 @@ def add_hedge_backtest_columns(df, target_ratio=TARGET_RATIO):
 
 
 def plot_portfolio_values(df, target_ratio=TARGET_RATIO):
+    strike_pct = df['Strike'].iloc[0] / df['SP'].iloc[0]
+    strike_pct_label = f'{strike_pct * 100:.1f}%'
+
     df_plot = df[:-1]  # Drop last row if incomplete
     fig, ax = plt.subplots(figsize=(12, 6))
 
@@ -38,14 +41,20 @@ def plot_portfolio_values(df, target_ratio=TARGET_RATIO):
     ax.plot(df_plot.index, df_plot['Hedged_3M_Value'], color='green', linewidth=1.5, label=f'Hedged 3M (Ratio: {target_ratio})')
     ax.plot(df_plot.index, df_plot['Hedged_1Y_Value'], color='purple', linewidth=1.5, label=f'Hedged 1Y (Ratio: {target_ratio})')
 
-    ax.set_title('Rebalanced Portfolio Value: Unhedged vs. Put Hedge', fontsize=14)
+    ax.set_title(
+        f'Rebalanced Portfolio Value: Unhedged vs. Put Hedge (Strike: {strike_pct_label})',
+        fontsize=14,
+    )
     ax.set_ylabel('Total Portfolio Value ($)')
     ax.set_xlabel('Date')
     ax.grid(True, linestyle='--', alpha=0.7)
     ax.legend(loc='upper left')
 
     plt.tight_layout()
-    plt.savefig(f'quant_strat_interview/q1_portfolio_value_ratio_{target_ratio}.png')
+    strike_pct_for_file = f'{strike_pct:.2f}'.replace('.', 'p')
+    plt.savefig(
+        f'quant_strat_interview/q1_portfolio_value_ratio_{target_ratio}_strike_{strike_pct_for_file}.png'
+    )
 
 def get_max_drawdown(value_series):
     """Calculates the Maximum Drawdown as a percentage."""

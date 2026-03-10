@@ -19,10 +19,12 @@ def run_q1_workflow(hedge_ratio=1.0, strike_pct=0.90):
 def parse_args():
     parser = argparse.ArgumentParser(description='Run Q1 workflow with configurable hedge ratio and strike percentage.')
     parser.add_argument('--hedge-ratio', type=float, default=1.0, help='Put hedge ratio used in rolling hedge analysis.')
-    parser.add_argument('--strike-pct', type=float, default=0.90, help='Strike as a percentage of spot (e.g. 0.90 for 90%%).')
+    parser.add_argument('--strike-pct', type=float, default=0.7, help='Strike as a percentage of spot (e.g. 0.90 for 90%%).')
     return parser.parse_args()
 
 
 if __name__ == '__main__':
-    args = parse_args()
-    run_q1_workflow(hedge_ratio=args.hedge_ratio, strike_pct=args.strike_pct)
+    # args = parse_args()
+    for hedge_ratio in [0.5, 0.7, 1.0, 1.5, 2.0]:
+        for strike_pct in [0.7, 0.8, 0.9, 1.0]:
+            run_q1_workflow(hedge_ratio=hedge_ratio, strike_pct=strike_pct)
