@@ -18,7 +18,7 @@ def implement_hedging_strategy(df, lookback=180, rebalance_freq=21, initial_capi
     data['Ret_Index'] = data['Index'].pct_change()
     data['Ret_FX'] = data['FX'].pct_change()
     data = data.dropna(subset=['Ret_Stock', 'Ret_Index', 'Ret_FX']).copy()
-    print(data[['Ret_Stock', 'Ret_Index', 'Ret_FX']].head())
+    # print(data[['Ret_Stock', 'Ret_Index', 'Ret_FX']].head())
     
     # 1. Periodic Beta Calculation
     # Calculate beta only on rebalance dates to avoid noisy daily turnover
@@ -36,8 +36,8 @@ def implement_hedging_strategy(df, lookback=180, rebalance_freq=21, initial_capi
         X = sm.add_constant(X)
         
         model = sm.OLS(y, X).fit()
-        beta_index.loc[date] = model.params['Index']
-        beta_fx.loc[date] = model.params['FX']
+        beta_index.loc[date] = model.params['Ret_Index']
+        beta_fx.loc[date] = model.params['Ret_FX']
         
     # Forward-fill betas for the days between rebalances
     data['Beta_Index'] = beta_index.ffill()
@@ -62,23 +62,26 @@ def implement_hedging_strategy(df, lookback=180, rebalance_freq=21, initial_capi
     
     return data
 
-def track_performance(returns_df, lookback, initial_capital=1_000_000):
+def track_performance(returns_df, lookback, rebalance_freq):
     """
     Calculates accurate performance metrics using the dollar PnL method.
     """
+    # Infer initial capital from the first value of Stock_Value
+    initial_capital = returns_df['Stock_Value'].iloc[0]
+
     # 1. Calculate Portfolio Values
     returns_df['Cum_Stock'] = returns_df['Stock_Value']
-    
+
     returns_df['Total_Index_Hedged_PnL'] = returns_df['Stock_PnL'] + returns_df['Index_Hedge_PnL']
     returns_df['Cum_Index_Hedged'] = initial_capital + returns_df['Total_Index_Hedged_PnL'].cumsum()
-    
+
     returns_df['Cum_Fully_Hedged'] = initial_capital + returns_df['Total_Hedged_PnL'].cumsum()
-    
+
     # 2. Calculate Daily Percentage Returns for Vol/Sharpe
     returns_df['Return_Stock'] = returns_df['Ret_Stock']
     returns_df['Return_Index_Hedged'] = returns_df['Total_Index_Hedged_PnL'] / returns_df['Cum_Index_Hedged'].shift(1).fillna(initial_capital)
     returns_df['Return_Fully_Hedged'] = returns_df['Total_Hedged_PnL'] / returns_df['Cum_Fully_Hedged'].shift(1).fillna(initial_capital)
-    
+
     # 3. Performance Metrics
     metrics = {}
     cols_to_evaluate = {
@@ -86,13 +89,13 @@ def track_performance(returns_df, lookback, initial_capital=1_000_000):
         'Index Hedged': 'Return_Index_Hedged', 
         'Fully Hedged': 'Return_Fully_Hedged'
     }
-    
+
     for label, col in cols_to_evaluate.items():
         ann_return = returns_df[col].mean() * 252
         ann_vol = returns_df[col].std() * np.sqrt(252)
         sharpe = ann_return / ann_vol if ann_vol != 0 else 0
         metrics[label] = {'Ann. Return': ann_return, 'Ann. Volatility': ann_vol, 'Sharpe Ratio': sharpe}
-        
+
     print(pd.DataFrame(metrics).T)
 
     # 4. Plotting
@@ -117,10 +120,16 @@ def track_performance(returns_df, lookback, initial_capital=1_000_000):
     ax2.grid(True, alpha=0.3)
 
     plt.tight_layout()
-    plt.savefig(f"quant_strat_interview/q2_corrected_lookback_{lookback}.png")
+    plt.savefig(f"quant_strat_interview/q2_pnl/q2_pnl_rebalance_{rebalance_freq}_lookback_{lookback}.png")
 
     return returns_df
 
 df = pd.read_csv("quant_strat_interview/q2.csv", header=0, parse_dates=["Date"])
-hedged_df = implement_hedging_strategy(df, lookback=180, rebalance_freq=21)
-# track_performance(hedged_df, lookback=180)
+# lookback = 180
+# rebalance_freq = 21
+# hedged_df = implement_hedging_strategy(df, lookback, rebalance_freq)
+# track_performance(hedged_df, lookback, rebalance_freq)
+for lookback in [180, 270, 360, 720]:
+    for rebalance_freq in [10, 20, 50, 100]:
+        hedged_df = implement_hedging_strategy(df, lookback, rebalance_freq)
+        track_performance(hedged_df, lookback, rebalance_freq)
