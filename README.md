@@ -1,6 +1,6 @@
 # Temasek Quant Strat Associate Interview Repository
 
-Welcome to the repository for the Temasek Quantitative Strategies Associate Interview. This repository contains Python scripts and data files designed to evaluate candidates' skills in quantitative analysis, hedging strategies, and data manipulation.
+Welcome to the repository for the Temasek Quantitative Strategies Associate Interview. This repository contains Python scripts and data files designed to evaluate candidates' skills in quantitative analysis, hedging strategies, and data manipulation. Candidates are required to complete a mini-project as indicated in `QS_case_study.xlsx` within 12 hours.
 
 ## Repository Structure
 
@@ -27,8 +27,6 @@ quant_strat_interview/
 
 To ensure compatibility and reproducibility, please follow the steps below to configure the Python environment for this repository.
 
-### macOS
-
 1. Install [Miniconda](https://docs.conda.io/en/latest/miniconda.html) or [Anaconda](https://www.anaconda.com/).
 2. Open a terminal and create the Conda environment from `environment.yml`:
    ```bash
@@ -43,48 +41,9 @@ To ensure compatibility and reproducibility, please follow the steps below to co
    conda env update -f environment.yml --prune
    ```
 
-### Windows
-
-1. Install [Miniconda](https://docs.conda.io/en/latest/miniconda.html) or [Anaconda](https://www.anaconda.com/).
-2. Open the Anaconda Prompt and create the Conda environment from `environment.yml`:
-   ```cmd
-   conda env create -f environment.yml
-   ```
-3. Activate the environment:
-   ```cmd
-   conda activate temasek
-   ```
-4. If the environment already exists and you need to refresh dependencies:
-   ```cmd
-   conda env update -f environment.yml --prune
-   ```
-
-## Environment Setup
-
-To simplify the process of setting up or updating the environment, a `setup_env.sh` script has been provided in the repository root. This script automates the creation and configuration of the required Python environment.
-
-### Steps to Run the Script
-
-1. Open a terminal and navigate to the repository root.
-2. Run the following command:
-   ```bash
-   source setup_env.sh
-   ```
-
-### What the Script Does
-
-- Creates a Conda environment named `temasek` from `environment.yml` (if it doesn't already exist).
-- Activates the `temasek` environment.
-- Updates dependencies from `environment.yml` when needed.
-
-### Notes
-
-- Ensure you have Conda installed on your system before running this script.
-- If you encounter any issues, please contact the repository maintainer.
 
 ## Notes
 
-- Ensure that you have Python 3.11 installed in your Conda environment.
 - The `environment.yml` file contains all required dependencies for this repository.
 - For any issues or questions, please contact the repository maintainer.
 
