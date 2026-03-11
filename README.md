@@ -30,33 +30,33 @@ To ensure compatibility and reproducibility, please follow the steps below to co
 ### macOS
 
 1. Install [Miniconda](https://docs.conda.io/en/latest/miniconda.html) or [Anaconda](https://www.anaconda.com/).
-2. Open a terminal and create a new Conda environment:
+2. Open a terminal and create the Conda environment from `environment.yml`:
    ```bash
-   conda create -n temasek python=3.11 -y
+   conda env create -f environment.yml
    ```
 3. Activate the environment:
    ```bash
    conda activate temasek
    ```
-4. Install the required packages:
+4. If the environment already exists and you need to refresh dependencies:
    ```bash
-   pip install -r requirements.txt
+   conda env update -f environment.yml --prune
    ```
 
 ### Windows
 
 1. Install [Miniconda](https://docs.conda.io/en/latest/miniconda.html) or [Anaconda](https://www.anaconda.com/).
-2. Open the Anaconda Prompt and create a new Conda environment:
+2. Open the Anaconda Prompt and create the Conda environment from `environment.yml`:
    ```cmd
-   conda create -n temasek python=3.11 -y
+   conda env create -f environment.yml
    ```
 3. Activate the environment:
    ```cmd
    conda activate temasek
    ```
-4. Install the required packages:
+4. If the environment already exists and you need to refresh dependencies:
    ```cmd
-   pip install -r requirements.txt
+   conda env update -f environment.yml --prune
    ```
 
 ## Environment Setup
@@ -73,9 +73,9 @@ To simplify the process of setting up or updating the environment, a `setup_env.
 
 ### What the Script Does
 
-- Creates a Conda environment named `temasek` (if it doesn't already exist).
+- Creates a Conda environment named `temasek` from `environment.yml` (if it doesn't already exist).
 - Activates the `temasek` environment.
-- Installs all required Python packages listed in `requirements.txt`.
+- Updates dependencies from `environment.yml` when needed.
 
 ### Notes
 
@@ -85,7 +85,7 @@ To simplify the process of setting up or updating the environment, a `setup_env.
 ## Notes
 
 - Ensure that you have Python 3.11 installed in your Conda environment.
-- The `requirements.txt` file should contain all the necessary dependencies for the scripts in this repository.
+- The `environment.yml` file contains all required dependencies for this repository.
 - For any issues or questions, please contact the repository maintainer.
 
 ---
