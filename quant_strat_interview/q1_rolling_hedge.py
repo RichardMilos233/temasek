@@ -1,6 +1,10 @@
 import numpy as np
 from q1_pricing import bs_put_price
 
+# at the end of the roll period, we need to rebalance our portfolio, 
+# if the stock price goes up, we need to put more, which is exactly why rebalance is needed
+# rebalance according to hedge ratio
+
 def calculate_rebalanced_portfolio(df, vol_col, roll_period, initial_capital, r=0.01, q=0.0, hedge_ratio=1.0):
     """
     Calculates the total portfolio value over time, rebalancing at each roll period 

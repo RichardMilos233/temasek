@@ -2,9 +2,11 @@ import pandas as pd
 import statsmodels.api as sm
 import itertools
 
+# we first conducted multi-linear regression on (index, currency pair) pair
+# to find out which pair has the most explanatory power (R^2)
+
 # 1. Load your data
 df = pd.read_csv("quant_strat_interview/q2.csv", header=0)
-
 
 # 2. Convert Prices to Returns
 # We use pct_change() to get daily returns. 
@@ -53,10 +55,14 @@ print(f"R-Squared: {best['R2']:.4f}")
 print(f"Hedge Ratio (Index): {best['Beta_Index']:.4f}")
 print(f"Hedge Ratio (Currency): {best['Beta_Curr']:.4f}")
 
+# Obviously FTSE has the most explanatory power, but which currency pair is unclear
+# GBPEUR is statistically insignificant, filtered out
 
+# since GBPUSD and EURUSD are both statistically significant, they are highly collinear
+# put both of them into another MLR, 
+# the one with stronger explanatory power will remain statistically significant, 
+# while the other one will not
 y = returns_df['Stock 1']
-    
-# Independent variables: Index + Currency + Constant
 idx = 'FTSE 100'
 curr1 = 'GBPUSD'
 curr2 = 'EURUSD'

@@ -1,6 +1,15 @@
 import pandas as pd
 import numpy as np
 
+# The VIX, officially known as the Chicago Board Options Exchange (CBOE) Volatility Index, 
+# is a real-time market index that represents the stock market's expectation of 
+# volatility over the next 30 days. 
+# Widely recognized as the premier gauge of U.S. equity market volatility, 
+# it is commonly referred to as Wall Street's "fear gauge" or "fear index."
+
+# in short, market drops -> high vix -> fear, vice versa
+#  vix is negatively correlated to S&P500
+
 VIX_INPUT_PATH = 'quant_strat_interview/q1_vix.xlsx'
 VIX_OUTPUT_PATH = 'quant_strat_interview/q1_vix_adjusted.csv'
 T_3M = 3 / 12
